@@ -30,6 +30,37 @@ func resourceTFETeam() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"organization_access": {
+				Type:     schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				MinItems: 1,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"manage_policies": {
+							Type:     schema.TypeBool,
+							ForceNew: true,
+							Optional: true,
+							Default:  false,
+						},
+
+						"manage_workspaces": {
+							Type:     schema.TypeBool,
+							ForceNew: true,
+							Optional: true,
+							Default:  false,
+						},
+
+						"manage_vcs_settings": {
+							Type:     schema.TypeBool,
+							ForceNew: true,
+							Optional: true,
+							Default:  false,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -44,6 +75,17 @@ func resourceTFETeamCreate(d *schema.ResourceData, meta interface{}) error {
 	// Create a new options struct.
 	options := tfe.TeamCreateOptions{
 		Name: tfe.String(name),
+	}
+
+	// Get and assert the Organization access configuration block.
+	if v, ok := d.GetOk("organization_access"); ok {
+		organizationAccessOptions := v.([]interface{})[0].(map[string]interface{})
+
+		options.OrganizationAccess = &tfe.OrganizationAccessOptions{
+			ManagePolicies:    tfe.Bool(organizationAccessOptions["manage_policies"].(bool)),
+			ManageWorkspaces:  tfe.Bool(organizationAccessOptions["manage_workspaces"].(bool)),
+			ManageVCSSettings: tfe.Bool(organizationAccessOptions["manage_vcs_settings"].(bool)),
+		}
 	}
 
 	log.Printf("[DEBUG] Create team %s for organization: %s", name, organization)
